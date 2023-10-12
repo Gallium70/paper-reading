@@ -1,9 +1,0 @@
-[book]
-authors = ["Gallium70"]
-language = "zh-CN"
-multilingual = false
-src = "src"
-title = "论文阅读笔记"
-
-[output.html]
-mathjax-support = true
