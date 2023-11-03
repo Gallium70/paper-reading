@@ -175,6 +175,7 @@
                     <main>
                         <h1 id="achieving-microsecond-scale-tail-latency-efficiently-with-approximate-optimal-scheduling"><a class="header" href="#achieving-microsecond-scale-tail-latency-efficiently-with-approximate-optimal-scheduling">Achieving Microsecond-Scale Tail Latency Efficiently with Approximate Optimal Scheduling</a></h1>
 <p>原文地址：<a href="https://dl.acm.org/doi/10.1145/3600006.3613136">doi/10.1145/3600006.3613136</a></p>
+<p>代码仓库：<a href="https://github.com/dslab-epfl/concord">dslab-epfl/concord</a></p>
 <h2 id="背景动机"><a class="header" href="#背景动机">背景动机</a></h2>
 <ol>
 <li>尾延迟约束</li>
@@ -191,6 +192,7 @@
 <h2 id="评估"><a class="header" href="#评估">评估</a></h2>
 <hr />
 <h2 id="评论"><a class="header" href="#评论">评论</a></h2>
+<p>看了下代码，比想象中还要简单，似乎并没有特殊的针对缓存优化的操作，直接放了个全局变量去查的。另外既然是在 LLVM 上加了一个 pass ，那应该对应用的语言要求不高， Rust 这种编译到 LLVM IR 的也能用。</p>
 
                     </main>
 
