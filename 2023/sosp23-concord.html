@@ -193,6 +193,13 @@
 <hr />
 <h2 id="评论"><a class="header" href="#评论">评论</a></h2>
 <p>看了下代码，比想象中还要简单，似乎并没有特殊的针对缓存优化的操作，直接放了个全局变量去查的。另外既然是在 LLVM 上加了一个 pass ，那应该对应用的语言要求不高， Rust 这种编译到 LLVM IR 的也能用。</p>
+<p>核心的部分包括 <a href="https://github.com/dslab-epfl/concord/blob/main/src/cache-line-pass/src/Concord.cpp#L182">在循环中插代码</a> ， <a href="https://github.com/dslab-epfl/concord/blob/main/src/cache-line-pass/src/Concord.cpp#L228">在函数中插代码</a> （不过这一部分好像没有调用）。在 IR 层面主要加了这些操作：</p>
+<ol>
+<li>查找或创建全局变量 <code>concord_preempt_now</code></li>
+<li>加载该全局变量的值，判断是否为 1</li>
+<li>若为 1 ，跳转到切换函数 <code>concord_func</code></li>
+</ol>
+<p>在<a href="https://github.com/dslab-epfl/concord/blob/main/src/lib/concord.c">调度器代码</a> 中，基本上的做法就是轮询 <code>rdtsc</code> ，如果时间到了，就把 <code>concord_preempt_now</code> 全局变量置为 1 。除了这个变量放在 TLS 外，目前没有看到其他针对缓存的优化，推测是轮询频率较高所以这个变量能常驻在缓存中。</p>
 
                     </main>
 
