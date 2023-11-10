@@ -26,3 +26,11 @@ Concord 通过近似模拟单队列调度和（基于中断的）精确抢占的
 ## 评论
 
 看了下代码，比想象中还要简单，似乎并没有特殊的针对缓存优化的操作，直接放了个全局变量去查的。另外既然是在 LLVM 上加了一个 pass ，那应该对应用的语言要求不高， Rust 这种编译到 LLVM IR 的也能用。
+
+核心的部分包括 [在循环中插代码](https://github.com/dslab-epfl/concord/blob/main/src/cache-line-pass/src/Concord.cpp#L182) ， [在函数中插代码](https://github.com/dslab-epfl/concord/blob/main/src/cache-line-pass/src/Concord.cpp#L228) （不过这一部分好像没有调用）。在 IR 层面主要加了这些操作：
+
+1. 查找或创建全局变量 `concord_preempt_now`
+2. 加载该全局变量的值，判断是否为 1
+3. 若为 1 ，跳转到切换函数 `concord_func`
+
+在[调度器代码](https://github.com/dslab-epfl/concord/blob/main/src/lib/concord.c) 中，基本上的做法就是轮询 `rdtsc` ，如果时间到了，就把 `concord_preempt_now` 全局变量置为 1 。除了这个变量放在 TLS 外，目前没有看到其他针对缓存的优化，推测是轮询频率较高所以这个变量能常驻在缓存中。
