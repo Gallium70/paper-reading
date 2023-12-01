@@ -1,5 +1,10 @@
 # Summary
 
+# 2021
+
+- [sosp]()
+  - [Syrup: User-Defined Scheduling Across the Stack](2021/sosp21-syrup.md)
+
 # 2023
 
 - [arxiv]()
