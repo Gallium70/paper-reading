@@ -5,6 +5,11 @@
 - [sosp]()
   - [Syrup: User-Defined Scheduling Across the Stack](2021/sosp21-syrup.md)
 
+# 2022
+
+- [asplos]()
+  - [Enzian: An Open, General, CPU/FPGA Platform for Systems Software Research](2022/asplos22-enzian.md)
+
 # 2023
 
 - [arxiv]()
