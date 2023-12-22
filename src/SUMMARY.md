@@ -19,3 +19,5 @@
   - [TreeSLS: A Whole-system Persistent Microkernel with Tree-structured State Checkpoint on NVM](2023/sosp23-treesls.md)
 - [sigcomm]()
   - [Achelous: Enabling Programmability, Elasticity, and Reliability in Hyperscale Cloud Networks](2023/sigcomm23-achelous.md)
+- [osdi]()
+  - [Flor: An Open High Performance RDMA Framework Over Heterogeneous RNICs](2023/osdi23-flor.md)
