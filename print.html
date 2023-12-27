@@ -91,9 +91,11 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded affix "><li class="part-title">2023</li><li class="chapter-item expanded "><div><strong aria-hidden="true">1.</strong> arxiv</div></li><li><ol class="section"><li class="chapter-item expanded "><a href="2023/arxiv-user-schedule.html"><strong aria-hidden="true">1.1.</strong> Towards Fast, Adaptive, and Hardware-Assisted User-Space Scheduling</a></li></ol></li><li class="chapter-item expanded "><div><strong aria-hidden="true">2.</strong> sosp</div></li><li><ol class="section"><li class="chapter-item expanded "><a href="2023/sosp23-concord.html"><strong aria-hidden="true">2.1.</strong> Achieving Microsecond-Scale Tail Latency Efficiently with Approximate Optimal Scheduling</a></li><li class="chapter-item expanded "><a href="2023/sosp23-treesls.html"><strong aria-hidden="true">2.2.</strong> TreeSLS: A Whole-system Persistent Microkernel with Tree-structured State Checkpoint on NVM</a></li></ol></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded affix "><li class="part-title">2021</li><li class="chapter-item expanded "><div><strong aria-hidden="true">1.</strong> sosp</div></li><li><ol class="section"><li class="chapter-item expanded "><a href="2021/sosp21-syrup.html"><strong aria-hidden="true">1.1.</strong> Syrup: User-Defined Scheduling Across the Stack</a></li></ol></li><li class="chapter-item expanded "><li class="part-title">2022</li><li class="chapter-item expanded "><div><strong aria-hidden="true">2.</strong> asplos</div></li><li><ol class="section"><li class="chapter-item expanded "><a href="2022/asplos22-enzian.html"><strong aria-hidden="true">2.1.</strong> Enzian: An Open, General, CPU/FPGA Platform for Systems Software Research</a></li></ol></li><li class="chapter-item expanded "><li class="part-title">2023</li><li class="chapter-item expanded "><div><strong aria-hidden="true">3.</strong> arxiv</div></li><li><ol class="section"><li class="chapter-item expanded "><a href="2023/arxiv-user-schedule.html"><strong aria-hidden="true">3.1.</strong> Towards Fast, Adaptive, and Hardware-Assisted User-Space Scheduling</a></li></ol></li><li class="chapter-item expanded "><div><strong aria-hidden="true">4.</strong> sosp</div></li><li><ol class="section"><li class="chapter-item expanded "><a href="2023/sosp23-concord.html"><strong aria-hidden="true">4.1.</strong> Achieving Microsecond-Scale Tail Latency Efficiently with Approximate Optimal Scheduling</a></li><li class="chapter-item expanded "><a href="2023/sosp23-treesls.html"><strong aria-hidden="true">4.2.</strong> TreeSLS: A Whole-system Persistent Microkernel with Tree-structured State Checkpoint on NVM</a></li></ol></li><li class="chapter-item expanded "><div><strong aria-hidden="true">5.</strong> sigcomm</div></li><li><ol class="section"><li class="chapter-item expanded "><a href="2023/sigcomm23-achelous.html"><strong aria-hidden="true">5.1.</strong> Achelous: Enabling Programmability, Elasticity, and Reliability in Hyperscale Cloud Networks</a></li></ol></li><li class="chapter-item expanded "><div><strong aria-hidden="true">6.</strong> osdi</div></li><li><ol class="section"><li class="chapter-item expanded "><a href="2023/osdi23-flor.html"><strong aria-hidden="true">6.1.</strong> Flor: An Open High Performance RDMA Framework Over Heterogeneous RNICs</a></li></ol></li></ol>
             </div>
-            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
         </nav>
 
         <!-- Track and set sidebar scroll position -->
@@ -174,7 +176,73 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="towards-fast-adaptive-and-hardware-assisted-user-space-scheduling"><a class="header" href="#towards-fast-adaptive-and-hardware-assisted-user-space-scheduling">Towards Fast, Adaptive, and Hardware-Assisted User-Space Scheduling</a></h1>
+                        <h1 id="syrup-user-defined-scheduling-across-the-stack"><a class="header" href="#syrup-user-defined-scheduling-across-the-stack">Syrup: User-Defined Scheduling Across the Stack</a></h1>
+<p>原文地址：<a href="https://dl.acm.org/doi/10.1145/3477132.3483548">doi/10.1145/3477132.3483548</a></p>
+<h2 id="背景"><a class="header" href="#背景">背景</a></h2>
+<ol>
+<li>应用性能受到多种调度机制的影响，比如 OS 、网络协议栈和应用自身的任务分配</li>
+<li>这些调度机制和策略往往与系统自身深度捆绑，例如 Linux 的 CFS 和网卡的流一致哈希 RSS，想要修改调度策略工作量大且通用性差</li>
+<li>希望能允许应用跨层定义自己的调度策略，在网卡、协议栈、内核调度器等多个地方执行</li>
+</ol>
+<p>用户定义的调度框架需要满足以下需求：</p>
+<ol>
+<li>表达力：能够实现多种调度策略</li>
+<li>跨层部署：在执行和数据路径上的各个层面生效</li>
+<li>低开销</li>
+<li>用户隔离</li>
+</ol>
+<h2 id="设计"><a class="header" href="#设计">设计</a></h2>
+<p>Syrup 由以下组件和工作流构成：</p>
+<ol>
+<li>调度策略文件，文件内需要实现一个简化的 C 的接口</li>
+<li>应用程序通过 <code>syr_deploy_policy</code> 调用指定调度策略和 hook</li>
+<li>这个函数和守护进程 <code>syrupd</code> 通信，后者编译调度策略成可执行代码</li>
+<li>将可执行代码部署到调度钩子位置</li>
+<li>不同部署点位的调度策略可以通过 <code>Map</code> 接口通信</li>
+</ol>
+<p>Syrup 将调度抽象为一个在线匹配问题，能够支持网络包、连接、线程作为输入，网卡队列、处理器核和网络 socket 作为执行器。</p>
+<h2 id="实现"><a class="header" href="#实现">实现</a></h2>
+<p>Syrup 利用 eBPF 和 ghOSt 分别作为网络协议栈和内核线程调度的后端，二者均提供了低开销、安全的内核 hook 机制。</p>
+<h2 id="性能评估"><a class="header" href="#性能评估">性能评估</a></h2>
+<p>RocksDB 和 MICA ，看 BE 和 LS 负载的吞吐和尾延迟</p>
+<h2 id="评价"><a class="header" href="#评价">评价</a></h2>
+<p>Syrup 在 Linux 内核中不同 hook 机制之上构造了一套统一的跨层调度框架，并且允许不同层和点位的调度执行单元互相通信，应用能够根据自己的情况更好地设计调度策略，并且相对轻松地部署。匹配-执行的抽象在软件定义网络的包调度中应用较广，现在用于 OS 内调度框架应该也很合适。</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="enzian-an-open-general-cpufpga-platform-for-systems-software-research"><a class="header" href="#enzian-an-open-general-cpufpga-platform-for-systems-software-research">Enzian: An Open, General, CPU/FPGA Platform for Systems Software Research</a></h1>
+<p>原文地址： <a href="https://dl.acm.org/doi/10.1145/3503222.3507742">doi/10.1145/3503222.3507742</a></p>
+<h2 id="背景-1"><a class="header" href="#背景-1">背景</a></h2>
+<ul>
+<li>过去的系统研究主要基于商用成品服务器，而随着越来越多的新型特化、异构的硬件架构在各类平台上部署，成品服务器无法满足探索新架构的需求。</li>
+<li>现有的 CPU-FPGA 系统主要可分为以下几类：
+<ul>
+<li>基于 PCIe 的加速器：FPGA 和 CPU 之间用大吞吐量的 PCIe 总线连接，但不适合细粒度的负载。编程接口通常类似 GPU。CCIX 和 CXL 等协议强化了内存和缓存一致性方面的能力。</li>
+<li>完全缓存一致协议：FPGA 和 CPU 直接通过缓存一致协议互联，FPGA 能够访问连接到 CPU 的内存，但自身几乎没有直连内存。适合细粒度的工作负载。</li>
+<li>智能网卡：主要用于处理网络包。用途相对单一。</li>
+<li>单芯片混合平台 MPSoC ：在 FPGA 内集成 CPU 核，FPGA 可以和 CPU 通过片内总线互联，嵌入 CPU 的内存子系统，但内嵌的 CPU 核通常性能较弱，难以运行真实负载。</li>
+</ul>
+</li>
+</ul>
+<h2 id="设计-1"><a class="header" href="#设计-1">设计</a></h2>
+<p>面向研究的平台需要满足两个重要的标准：</p>
+<ol>
+<li>高覆盖率：能够模拟替换更多的特化系统，还能覆盖尽可能多的未来潜在的设计</li>
+<li>性能充足：与现有的特化的系统的性能相当，便于对比。</li>
+</ol>
+<p>Enzian 主要遵循以下设计原则：</p>
+<ul>
+<li>不要过度担心每台单元的成本</li>
+<li>不确定的时候就过度设计</li>
+<li>倾向于大带宽而不是容量</li>
+<li>避免被现有标准限制</li>
+<li>暴露更多的底层控制和测量接口</li>
+<li>不只考虑单个单元，而要考虑多台互联组成更大的系统</li>
+</ul>
+<p>Enzian 硬件上主要架构是双槽 NUMA 系统，CPU 是 Marvell Cavium ThunderX-1 ARMv8, FPGA 是 Xilinx XCVU9P ，二者通过原生的一致性互联协议连接，此外还有丰富的内存、网络、存储等接口。在 FPGA 一侧采用了自行设计的 ECI 一致性接口，能够与 CPU 的 CCPI 协议互相操作。</p>
+<p>基板管理器 (BMC) 部分硬件采用了基于 Zynq 7000 的设计，软件采用 OpenBMC ，能够精细灵活地调控基板上大量的电源轨配置、上电时序、时钟分布等内容。Enzian 中有 25 个电压调节芯片，提供 30 个电源轨，其中大部分可以通过 PMBus 协议控制和监测，可以用于研究供电异常等场景下的系统行为。</p>
+<h2 id="评估"><a class="header" href="#评估">评估</a></h2>
+<p>主要评估了以下场景：缓存一致互联、网络、PCIe 加速器应用、定制内存控制器、功耗监测。</p>
+<h2 id="评价-1"><a class="header" href="#评价-1">评价</a></h2>
+<p>很多研究致力于解决现实应用中遇到的问题，但是解决研究过程本身遇到的问题的工作相对较少。尽管 Enzian 的设计原则很大程度上与工业产品的实践相悖，但最终呈现的系统的完成度却相当高，不像某些只能作为实验室里的小玩具。</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="towards-fast-adaptive-and-hardware-assisted-user-space-scheduling"><a class="header" href="#towards-fast-adaptive-and-hardware-assisted-user-space-scheduling">Towards Fast, Adaptive, and Hardware-Assisted User-Space Scheduling</a></h1>
 <p>原文地址： <a href="https://arxiv.org/abs/2308.02896">arXiv:2308.02896</a></p>
 <h2 id="背景动机"><a class="header" href="#背景动机">背景动机</a></h2>
 <ol>
@@ -190,7 +258,7 @@
 <li>LibUtimer: 轮询 TSC, 用 <code>UMWAIT</code> 降低功耗或让出超线程</li>
 <li>调度器: 全局就绪队列，动态调整调度周期</li>
 </ol>
-<h2 id="评估"><a class="header" href="#评估">评估</a></h2>
+<h2 id="评估-1"><a class="header" href="#评估-1">评估</a></h2>
 <h3 id="性能对比"><a class="header" href="#性能对比">性能对比</a></h3>
 <p>负载类型：重尾（双模态）、轻尾（指数）、动态（前半段重尾，后半段轻尾）</p>
 <p>相同尾延迟约束下，吞吐量比 Shinjuku 高 10% ~ 50%</p>
@@ -229,7 +297,7 @@
 <li>JBSQ 调度器，近似单队列，减少缓存一致性带来的阻塞</li>
 <li>任务调度器也参与处理请求</li>
 </ol>
-<h2 id="评估-1"><a class="header" href="#评估-1">评估</a></h2>
+<h2 id="评估-2"><a class="header" href="#评估-2">评估</a></h2>
 <hr />
 <h2 id="评论-1"><a class="header" href="#评论-1">评论</a></h2>
 <p>看了下代码，比想象中还要简单，似乎并没有特殊的针对缓存优化的操作，直接放了个全局变量去查的。另外既然是在 LLVM 上加了一个 pass ，那应该对应用的语言要求不高， Rust 这种编译到 LLVM IR 的也能用。</p>
@@ -254,12 +322,68 @@
 <li>基于 NVM 和微内核 Capability Tree 结构和检查点的全系统持久化 SLS</li>
 <li>透明外部同步性</li>
 </ol>
-<h2 id="设计"><a class="header" href="#设计">设计</a></h2>
+<h2 id="设计-2"><a class="header" href="#设计-2">设计</a></h2>
 <ol>
 <li>定期停机，让所有处理器核进入内核态等待，其中一个核负责将系统的 Capability Tree 做检查点持久化</li>
 <li>检查点管理器使用日志系统维护自身的持久化，避免自举问题</li>
 <li>内存页分冷热处理，热页在停机的时候持久化，冷页先标记成只读，等应用尝试修改的时候触发页错误，再持久化</li>
 </ol>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="achelous-enabling-programmability-elasticity-and-reliability-in-hyperscale-cloud-networks"><a class="header" href="#achelous-enabling-programmability-elasticity-and-reliability-in-hyperscale-cloud-networks">Achelous: Enabling Programmability, Elasticity, and Reliability in Hyperscale Cloud Networks</a></h1>
+<p>原文地址 <a href="https://dl.acm.org/doi/10.1145/3603269.3604859">doi/10.1145/3603269.3604859</a></p>
+<h2 id="背景与问题"><a class="header" href="#背景与问题">背景与问题</a></h2>
+<p>Achelous是阿里云的网络虚拟化平台。随着云计算业务的发展，单个虚拟私有云（VPC）中的实例节点数量达到了百万量级，而现有的研究往往关注单一具体的问题，无法支持大规模的云网络架构。在现代云环境中主要面临以下三个挑战：</p>
+<ol>
+<li>百万并发实例下的亚秒级重配置。大规模云网络有两个关键特征：高部署密度和高频实例创建和销毁。流量高峰期，用户可能同时创建数万个生命周期仅有几分钟的实例，单个VPC中总实例数量可达百万级，这会产生大量的路由表项变动，对网络收敛速度提出了很高的要求。</li>
+<li>为重流量的中间盒部署提供高弹性网络。传统网络中间盒（如负载均衡器、NAT网关、防火墙等）通常部署在专用的物理硬件上，而为了提高灵活性，降低成本，云服务商逐渐将这些功能迁移到云上的虚拟机中，此时CPU、内存等资源的竞争可能影响中间盒的性能。此外，传统的中心化负载均衡和ECMP路由机制横向扩展性不佳，难以应对百万级数量的虚拟机产生的流量。</li>
+<li>云服务的高可靠性。云上的虚拟网络变动频繁，不存在一个稳定的拓扑结构，传统的故障探测手段或者只能处理物理网络，或者缺乏实时探测能力，无法确保云网络的可靠性。此外，大多数热迁移手段没有考虑有状态流的流量持续性，进而导致租户服务中断。</li>
+</ol>
+<h2 id="解决方案与设计"><a class="header" href="#解决方案与设计">解决方案与设计</a></h2>
+<p>为了应对上述三个挑战，Achelous 2.1将控制平面和数据平面协同设计，带来以下三项关键提升：</p>
+<ol>
+<li>大规模网络可编程性。Achelous采用主动学习机制，由vSwitch定期向网关学习路由信息，自己只需要维护转发缓存，而控制器只需要对网关编程，不需要调整每个vSwitch的配置，vSwitch也不需要存储完整的转发信息，降低了内存开销，提升了网络收敛速度。</li>
+<li>弹性网络。Achelous对一个主机上的所有虚拟机采用弹性信用点策略，既能确保性能隔离，又可以在资源空闲时吸收突发流量负载。Achelous还在vSwitch上实现了分布式ECMP机制，消除了中心节点带来的瓶颈。</li>
+<li>网络风险感知和热迁移。Achelous采用多种主动网络健康探测手段，为网络故障提供早期预警。vSwitch会定期向虚拟机发送健康检查包，也会向控制器报告性能统计信息。检测到故障风险时，vSwitch会根据控制器的指导，热迁移相关的虚拟机，迁移过程中采取流量重定向、会话复位和会话同步等技术降低服务中断时间。</li>
+</ol>
+<h2 id="实现细节"><a class="header" href="#实现细节">实现细节</a></h2>
+<h3 id="大规模网络可编程性"><a class="header" href="#大规模网络可编程性">大规模网络可编程性</a></h3>
+<p>在大规模云网络中，虚拟机路由表（VRT）和虚拟机-主机映射表（VHT）变动较频繁，需要针对性优化，而ACL、QoS等配置则相对固定，且占用体积小，可以保留在vSwitch上。Achelous在vSwitch上部署了轻量级转发缓存（FC），其中只保存目标IP→下一跳的映射，相比基于五元组等流表的设计，FC可以大幅降低计算和内存开销，也消除了针对元组空间的DoS攻击风险。</p>
+<ul>
+<li>快速路径：Achelous 2.1的快速路径与2.0相同，基于五元组的流和双向流组成的会话进行精确匹配，后续进入处理流水线。</li>
+<li>慢速路径：查询FC（而非2.0中查询VRT和VHT），若命中则从vSwitch直接发送到目标vSwitch，同时生成会话匹配项注入快速路径；未命中时，由网关转发，同时vSwitch会从网关学习记录对应的FC条目。
+vSwitch定期（50ms）遍历所有的FC项，如果发现某项的存留时间超过阈值（如100ms），则通过路由同步协议（RSP）向网关查询，如果对应FC项有变动，则重新从网关学习更新，否则保持FC项不变。</li>
+</ul>
+<h3 id="弹性网络"><a class="header" href="#弹性网络">弹性网络</a></h3>
+<p>Achelous采用信用点策略，在每台主机上为每个虚拟机设定带宽和处理器资源限制。当虚拟机实际使用的带宽和处理器低于限制时，累积信用点；当出现突发流量，资源使用超出限制时，消耗信用点；当信用点全部消耗完后，虚拟机资源会被削减到预设的限制值上。</p>
+<h3 id="网络风险感知"><a class="header" href="#网络风险感知">网络风险感知</a></h3>
+<p>vSwitch定期向虚拟机发送ARP包检测虚拟机的网络健康状况。对于vSwitch之间的链路，控制器会预先配置一个检查清单，vSwitch会向检查单中的地址定期发送健康探测包，健康监测器分析这些包的延迟，向控制器报告可能的网络风险，如虚拟机失效或链路阻塞。此外，Achelous还会检测虚拟网络设备的健康状况，如CPU负载、内存占用和网卡丢包率，如果发现异常则通知控制器介入，启动故障恢复机制。</p>
+<h2 id="评价-2"><a class="header" href="#评价-2">评价</a></h2>
+<p>Achelous是阿里云整体的网络虚拟化平台，vSwitch是其中的边缘节点和重要组成部分。在vSwitch的转发加速上，Achelous的快速路径与OVS的microflow相似，均是基于五元组做精确匹配；而OVS的megaflow仍然基于元组空间搜索，Achelous则采用更类似传统路由表的“目标IP→下一跳”的转发缓存。由于面对的VPC规模大，变动频繁，Achelous更进一步强调控制平面的更新性能，采取了更短的轮询更新间隔。</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="flor-an-open-high-performance-rdma-framework-over-heterogeneous-rnics"><a class="header" href="#flor-an-open-high-performance-rdma-framework-over-heterogeneous-rnics">Flor: An Open High Performance RDMA Framework Over Heterogeneous RNICs</a></h1>
+<p>原文链接：<a href="https://www.usenix.org/conference/osdi23/presentation/li-qiang">osdi23-flor</a></p>
+<h2 id="背景-2"><a class="header" href="#背景-2">背景</a></h2>
+<ul>
+<li>不同厂商、甚至同一厂商的不同代的 RDMA 网卡 (RNIC) 之间没有统一的控制平面接口</li>
+<li>这些网卡部署在同一集群中时，并不能很好地配合，互相通信时性能存在损失且不均衡</li>
+</ul>
+<h2 id="设计-3"><a class="header" href="#设计-3">设计</a></h2>
+<p>Flor 采用数据平面与控制平面分离的思路，从异构的RNIC中抽象出一组通用的控制功能，构造出通用的高性能RDMA框架，优化了异构RNIC的互操作性，且能够适应轻度有损耗的数据中心网络。</p>
+<p>Flor 主要由五个模块构成：连接管理，分块、拥塞控制、可靠性、RTT测量。数据平面采用RDMA WRITE和SEND操作，控制平面则上移到软件处理。</p>
+<ol>
+<li>连接管理模块：负责建立和释放连接，并管理备份QP，当主QP断链时切换到备份QP，以实现快速恢复；此外在使用软件可靠性模块时还有ACK QP。</li>
+<li>分块模组：将大的消息分解成小的RDMA请求，而选择性重传和拥塞控制算法以块为基本单元，而非网络包。</li>
+<li>RTT测量模块：负责收集网卡的硬件时间戳并与软件同步，更新RTT；在Flor中RTT是网络拥塞、重传和链路故障检测的信号。</li>
+<li>可靠性模组：负责存储传输层信息并维护丢包检测和RTT计算的状态，实现基于软件的选择性重传。</li>
+<li>拥塞控制模块：根据拥塞信息和丢包事件，通过拥塞控制算法计算出拥塞窗口和发送速率；Flor默认的拥塞控制算法是基于RTT的。</li>
+</ol>
+<h2 id="评估-3"><a class="header" href="#评估-3">评估</a></h2>
+<p>主要与 XRDMA 对比。</p>
+<ul>
+<li>将控制策略上移到软件带来的额外 CPU 开销并不显著，同时可以获得与XRDMA相近的吞吐量。</li>
+<li>在从1/16384到1/256的不同的高低丢包率场景下，Flor的吞吐量均超过了Mellanox CX-5有损/无损配置+XRDMA的组合。</li>
+<li>基于软件的拥塞控制能够更好适应有损网络，摆脱了对PFC的依赖，也能够大幅消减异构RNIC之间的性能差异，在跨Pod通信和异构部署的场景下能够获得稳定且均衡的性能表现。</li>
+</ul>
+<h2 id="评价-3"><a class="header" href="#评价-3">评价</a></h2>
+<p>RNIC 层面的“软件定义网络”，将控制和数据平面分开，控制平面交给软件。风格和 Achelous 有类似之处，主要面向大规模部署下暴露出的问题，针对性解决。</p>
 
                     </main>
 
